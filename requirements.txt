@@ -1,0 +1,17 @@
+# Core LangChain packages for document processing and RAG
+langchain-community      # Community integrations for LangChain
+langchain-core          # Core LangChain classes (Document, etc.)
+langchain               # Main LangChain package for text splitting
+
+# Environment and configuration
+python-dotenv           # Load environment variables from .env files
+
+# Document loaders and processors
+docx2txt               # Extract text from DOCX files
+pypdf                  # PDF file processing backend
+pandas                 # Data manipulation for CSV/Excel files
+openpyxl               # Excel file support for pandas
+
+# Web scraping and HTTP requests
+beautifulsoup4         # HTML parsing for web content
+requests               # HTTP requests for URL loading
