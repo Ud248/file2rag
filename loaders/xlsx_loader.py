@@ -1,20 +1,37 @@
 import pandas as pd
 from langchain_core.documents import Document
+from typing import List
+import os
 
-def load_xlsx(file_path: str) -> list[Document]:
+def load_xlsx(file_path: str) -> List[Document]:
+    """
+    Load XLSX file and return one Document per sheet (no chunking).
+    Each row is formatted as key: value pairs for better readability.
+    """
     documents = []
     excel_file = pd.ExcelFile(file_path)
+
     for sheet_name in excel_file.sheet_names:
-        df = pd.read_excel(excel_file, sheet_name=sheet_name)
+        df = pd.read_excel(file_path, sheet_name=sheet_name).fillna("")
 
-        #convert to text(similar with csv format)
-        text_content = df.to_csv(index=False)
+        rows_text = []
+        for _, row in df.iterrows():
+            row_text = "\n".join([f"{col}: {row[col]}" for col in df.columns])
+            rows_text.append(row_text)
 
-        doc = Document(
-            page_content=text_content,
-            metadata = {"sheet": sheet_name, "source": file_path}
+        doc_text = "\n\n".join(rows_text)
+
+        documents.append(
+            Document(
+                page_content=doc_text,
+                metadata={
+                    "source": os.path.basename(file_path),
+                    "file_type": "xlsx",
+                    "sheet": sheet_name,
+                    "total_rows": len(df),
+                    "columns": list(df.columns)
+                }
+            )
         )
-
-        documents.append(doc)
 
     return documents
