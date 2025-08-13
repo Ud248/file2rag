@@ -1,17 +1,15 @@
 # Core LangChain packages for document processing and RAG
-langchain-community      # Community integrations for LangChain
-langchain-core          # Core LangChain classes (Document, etc.)
-langchain               # Main LangChain package for text splitting
+langchain-community      # Document loaders (PyPDFLoader, Docx2txtLoader, TextLoader, WebBaseLoader)
+langchain-core          # Core classes (Document, etc.)  
+langchain               # Text splitter (RecursiveCharacterTextSplitter)
 
 # Environment and configuration
 python-dotenv           # Load environment variables from .env files
 
-# Document loaders and processors
-docx2txt               # Extract text from DOCX files
-pypdf                  # PDF file processing backend
-pandas                 # Data manipulation for CSV/Excel files
-openpyxl               # Excel file support for pandas
+# Document processing libraries
+pandas                  # Data manipulation for CSV/Excel files (.csv_loader.py, .xlsx_loader.py)
+openpyxl               # Excel file support for pandas (.xlsx_loader.py)
 
-# Web scraping and HTTP requests
-beautifulsoup4         # HTML parsing for web content
-requests               # HTTP requests for URL loading
+# AI embeddings and vector database
+google-generativeai    # Gemini API for embeddings (gemini_embedder.py)
+pymilvus               # Milvus vector database client (milvus_vector_store.py)
