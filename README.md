@@ -2,6 +2,58 @@
 
 Hệ thống RAG (Retrieval-Augmented Generation) đơn giản và hiệu quả, giúp chuyển đổi tài liệu thành cơ sở tri thức có thể tìm kiếm bằng công nghệ vector embedding và Milvus vector database.
 
+## ⚡ Quick Start
+
+```bash
+# 1. Clone và cài đặt
+git clone https://github.com/yourusername/file2rag.git
+cd file2rag
+pip install -r requirements.txt
+
+# 2. Tạo .env file với Gemini API key
+echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
+
+# 3. Khởi động Milvus
+docker run -d --name milvus-standalone -p 19530:19530 milvusdb/milvus:v2.3.3
+
+# 4. Xử lý document đầu tiên
+python -c "
+from rag.pipeline.rag_pipeline import RAGPipeline
+rag = RAGPipeline(collection_name='demo')
+doc_id = rag.process_document('your_document.pdf')
+print(f'✅ Processed: {doc_id}')
+"
+```
+
+## 📖 Demo nhanh
+
+### Xử lý file PDF:
+```python
+from rag.pipeline.rag_pipeline import RAGPipeline
+
+# Khởi tạo và xử lý document
+rag = RAGPipeline(collection_name="my_docs")
+doc_id = rag.process_document("report.pdf")
+
+# Output:
+# 🚀 Initializing RAG Pipeline...
+# ✅ RAG Pipeline initialized successfully!
+# 📄 Processing document: report.pdf
+# 📂 Loading document... (2.1s)
+# ✂️ Chunking documents... (0.3s)
+# 🧠 Creating embeddings... (8.7s)
+# 💾 Storing in vector database... (1.2s)
+# ✅ Document processed successfully in 12.34s
+```
+
+### Batch processing:
+```python
+files = ["doc1.pdf", "data.csv", "notes.txt", "sheet.xlsx"]
+for file in files:
+    doc_id = rag.process_document(file)
+    print(f"✅ {file} → {doc_id}")
+```
+
 ## ✨ Tính năng chính
 
 - **📄 Hỗ trợ đa định dạng**: PDF, DOCX, TXT, CSV, XLSX và URL web
@@ -33,78 +85,354 @@ Hệ thống RAG (Retrieval-Augmented Generation) đơn giản và hiệu quả,
 
 ### Yêu cầu hệ thống
 
-- **Python**: 3.8+
-- **Milvus**: Server instance (local/cloud)
-- **API Key**: Google AI Studio (cho Gemini embeddings)
+- **Python**: 3.8+ (khuyến nghị 3.9+)
+- **Docker**: Để chạy Milvus server
+- **Memory**: Tối thiểu 4GB RAM (8GB+ khuyến nghị)
+- **Disk**: 2GB+ dung lượng trống
 
-### Cài đặt nhanh
+### Bước 1: Cài đặt dự án
 
 ```bash
-# 1. Clone repository
+# Clone repository
 git clone https://github.com/yourusername/file2rag.git
 cd file2rag
 
-# 2. Cài đặt dependencies
-pip install -r requirements.txt
+# Tạo virtual environment (khuyến nghị)
+python -m venv venv
 
-# 3. Thiết lập môi trường
-# Tạo file .env và thêm API key
-GEMINI_API_KEY=your_gemini_api_key_here
-MILVUS_HOST=localhost
-MILVUS_PORT=19530
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# Cài đặt dependencies
+pip install -r requirements.txt
+```
+
+### Bước 2: Lấy Gemini API Key
+
+1. Truy cập [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Đăng nhập với Google account
+3. Tạo API key mới
+4. Copy API key để sử dụng
+
+### Bước 3: Cấu hình môi trường
+
+```bash
+# Tạo file .env trong thư mục gốc của project
+echo "GEMINI_API_KEY=your_actual_api_key_here" > .env
+echo "MILVUS_HOST=localhost" >> .env
+echo "MILVUS_PORT=19530" >> .env
+
+# Kiểm tra file .env
+cat .env
+```
+
+### Bước 4: Khởi động Milvus
+
+Xem phần **Khởi động Milvus (Docker)** bên dưới để có hướng dẫn chi tiết.
+
+### Bước 5: Test installation
+
+```python
+# Test script - tạo file test_installation.py
+import os
+from dotenv import load_dotenv
+
+print("🧪 Testing File2RAG installation...")
+
+# Test 1: Environment variables
+load_dotenv()
+api_key = os.getenv('GEMINI_API_KEY')
+print(f"✅ Gemini API key loaded: {'Yes' if api_key else 'No'}")
+
+# Test 2: Milvus connection
+try:
+    from pymilvus import connections
+    connections.connect("default", host="localhost", port="19530")
+    print("✅ Milvus connection: Success")
+    connections.disconnect("default")
+except Exception as e:
+    print(f"❌ Milvus connection: Failed - {e}")
+
+# Test 3: Gemini API
+try:
+    import google.generativeai as genai
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('models/text-embedding-004')
+    print("✅ Gemini API: Success")
+except Exception as e:
+    print(f"❌ Gemini API: Failed - {e}")
+
+# Test 4: RAG Pipeline
+try:
+    from rag.pipeline.rag_pipeline import RAGPipeline
+    print("✅ RAG Pipeline import: Success")
+except Exception as e:
+    print(f"❌ RAG Pipeline import: Failed - {e}")
+
+print("\n🎉 Installation test completed!")
+```
+
+Chạy test:
+```bash
+python test_installation.py
 ```
 
 ### Khởi động Milvus (Docker)
 
-```bash
-# Download và chạy Milvus standalone
-docker run -d --name milvus-standalone \
-  -p 19530:19530 \
-  -v milvus_data:/var/lib/milvus \
-  milvusdb/milvus:latest
+#### Phương pháp 1: Milvus Standalone (Đơn giản - Khuyến nghị)
 
-# Kiểm tra status
-docker ps | grep milvus
+```bash
+# Bước 1: Pull và chạy Milvus standalone
+docker run -d \
+  --name milvus-standalone \
+  --security-opt seccomp:unconfined \
+  -p 19530:19530 \
+  -p 9091:9091 \
+  -v ${PWD}/volumes/milvus:/var/lib/milvus \
+  milvusdb/milvus:v2.3.3
+
+# Bước 2: Kiểm tra container đã chạy
+docker ps | findstr milvus
+
+# Bước 3: Kiểm tra logs
+docker logs milvus-standalone
+
+# Bước 4: Test kết nối
+python -c "from pymilvus import connections; connections.connect('default', host='localhost', port='19530'); print('✅ Milvus connected successfully!')"
+```
+
+#### Phương pháp 2: Docker Compose (Production)
+
+Tạo file `docker-compose.yml`:
+
+```yaml
+version: '3.5'
+
+services:
+  etcd:
+    container_name: milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio:
+    container_name: milvus-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  milvus:
+    container_name: milvus-standalone
+    image: milvusdb/milvus:v2.3.3
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - "etcd"
+      - "minio"
+```
+
+Chạy với Docker Compose:
+```bash
+docker-compose up -d
+```
+
+#### Troubleshooting Milvus
+
+```bash
+# Kiểm tra các container đang chạy
+docker ps -a
+
+# Xem logs của Milvus
+docker logs milvus-standalone -f
+
+# Restart Milvus nếu cần
+docker restart milvus-standalone
+
+# Dọn dẹp và khởi động lại
+docker stop milvus-standalone
+docker rm milvus-standalone
+# Chạy lại lệnh docker run ở trên
+
+# Test kết nối từ Python
+python -c "
+from pymilvus import connections, utility
+try:
+    connections.connect('default', host='localhost', port='19530')
+    print('✅ Kết nối Milvus thành công!')
+    print(f'Server version: {utility.get_server_version()}')
+except Exception as e:
+    print(f'❌ Lỗi kết nối: {e}')
+"
 ```
 
 ## 📋 Hướng dẫn sử dụng thực tế
 
-### 1. Sử dụng cơ bản
+### Chuẩn bị environment
+
+```bash
+# 1. Tạo file .env trong thư mục dự án
+echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
+echo "MILVUS_HOST=localhost" >> .env
+echo "MILVUS_PORT=19530" >> .env
+
+# 2. Cài đặt Python dependencies
+pip install -r requirements.txt
+
+# 3. Khởi động Milvus (xem phần trên)
+```
+
+### Ví dụ 1: Xử lý file PDF đơn giản
+
+```python
+import os
+from dotenv import load_dotenv
+from rag.pipeline.rag_pipeline import RAGPipeline
+
+# Load environment variables
+load_dotenv()
+
+# Khởi tạo pipeline với collection name
+rag = RAGPipeline(collection_name="my_research_papers")
+
+# Xử lý file PDF
+document_id = rag.process_document("./data/machine_learning_paper.pdf")
+print(f"✅ Document processed with ID: {document_id}")
+
+# Output mẫu:
+# 🚀 Initializing RAG Pipeline...
+# ✅ RAG Pipeline initialized successfully!
+# 
+# 📄 Processing document: ./data/machine_learning_paper.pdf
+# 📂 Loading document...
+#    Loaded 15 document sections  
+# ✂️ Chunking documents...
+#    Created 47 chunks
+# 🧠 Creating embeddings...
+#    Generated 47 embeddings
+# 💾 Storing in vector database...
+# ✅ Document processed successfully in 12.34s
+#    Document ID: doc_1703123456789
+```
+
+### Ví dụ 2: Xử lý nhiều loại file
 
 ```python
 from rag.pipeline.rag_pipeline import RAGPipeline
 
-# Khởi tạo pipeline
-rag = RAGPipeline(collection_name="my_documents")
+# Khởi tạo pipeline cho collection khác nhau
+knowledge_base = RAGPipeline(collection_name="company_knowledge")
 
-# Xử lý tài liệu (tự động: load → chunk → embed → store)
-document_id = rag.process_document("path/to/document.pdf")
-print(f"✅ Processed document: {document_id}")
+# Xử lý các loại file khác nhau
+files_to_process = [
+    "./documents/company_handbook.pdf",      # PDF document
+    "./documents/employee_data.csv",         # CSV table  
+    "./documents/quarterly_report.docx",     # Word document
+    "./documents/meeting_notes.txt",         # Text file
+    "./documents/budget_2024.xlsx",          # Excel spreadsheet
+    "https://company.com/blog/new-policy"    # Web URL
+]
 
-# Tìm kiếm (cần implement thêm search method)
-# results = rag.search("Machine learning trong healthcare", k=5)
+processed_docs = []
+for file_path in files_to_process:
+    try:
+        doc_id = knowledge_base.process_document(file_path)
+        processed_docs.append({
+            'file': file_path,
+            'document_id': doc_id,
+            'status': 'success'
+        })
+        print(f"✅ Processed: {file_path}")
+    except Exception as e:
+        processed_docs.append({
+            'file': file_path,
+            'document_id': None,
+            'status': 'failed',
+            'error': str(e)
+        })
+        print(f"❌ Failed: {file_path} - {e}")
+
+# In kết quả
+for doc in processed_docs:
+    print(f"File: {doc['file']}")
+    print(f"Status: {doc['status']}")
+    if doc['status'] == 'success':
+        print(f"Document ID: {doc['document_id']}")
+    else:
+        print(f"Error: {doc['error']}")
+    print("-" * 50)
 ```
 
-### 2. Xử lý các loại file khác nhau
+### Ví dụ 3: Xử lý và kiểm tra dữ liệu trong Milvus
 
 ```python
-# PDF documents
-doc_id = rag.process_document("research_paper.pdf")
+from rag.pipeline.rag_pipeline import RAGPipeline
+from pymilvus import connections, Collection
 
-# Word documents  
-doc_id = rag.process_document("report.docx")
+# Khởi tạo pipeline
+rag = RAGPipeline(collection_name="document_store")
 
-# Text files
-doc_id = rag.process_document("notes.txt")
+# Xử lý document
+doc_id = rag.process_document("./sample.pdf")
 
-# CSV files (sẽ dùng table splitter)
-doc_id = rag.process_document("data.csv")
+# Kết nối trực tiếp với Milvus để kiểm tra dữ liệu
+connections.connect("default", host="localhost", port="19530")
+collection = Collection("document_store")
 
-# Excel files (sẽ dùng table splitter)  
-doc_id = rag.process_document("spreadsheet.xlsx")
+# Kiểm tra thông tin collection
+print(f"Collection name: {collection.name}")
+print(f"Collection entities: {collection.num_entities}")
+print(f"Collection schema: {collection.schema}")
 
-# Web URLs
-doc_id = rag.process_document("https://example.com/article")
+# Load collection để có thể query
+collection.load()
+
+# Tìm kiếm vector tương tự (demo - cần embedding của query)
+# search_results = collection.search(
+#     data=[query_embedding],  # Cần tạo embedding cho query
+#     anns_field="embedding",
+#     param={"metric_type": "COSINE", "params": {"nprobe": 10}},
+#     limit=5,
+#     output_fields=["content", "source", "page"]
+# )
 ```
 
 ### 3. Chunking strategies được áp dụng tự động
@@ -215,11 +543,6 @@ file2rag/
 ├── 📁 utils/                         # Utility functions
 │   ├── __init__.py
 │   └── text_cleaner.py               # Regex-based text cleaning
-├── 📁 test/                          # Test suite
-│   ├── test_chunkers.py
-│   ├── test_embedding.py
-│   ├── test_loaders.py
-│   └── test_pipeline.py              # Pipeline testing
 ├── 📄 requirements.txt               # Python dependencies
 └── 📄 README.md                     # Tài liệu này
 ```
@@ -248,53 +571,6 @@ pymilvus              # Milvus client
 python-dotenv         # .env file support
 ```
 
-## 🧪 Testing
-
-Chạy tests có sẵn:
-
-```bash
-# Test process_document với file cụ thể
-python test\test_pipeline.py "path/to/file.pdf"
-
-# Test với URL
-python test\test_pipeline.py "https://example.com"
-
-# Test với document ID custom
-python test\test_pipeline.py "file.txt" --doc-id "custom_123" 
-
-# Test multiple file types
-python test\test_pipeline.py --multi
-
-# Test error handling
-python test\test_pipeline.py --errors
-
-# Chạy tất cả tests
-python test\test_pipeline.py --all
-```
-
-Test output example:
-```
-🧪 TESTING PROCESS_DOCUMENT FUNCTION ONLY
-File: sample.pdf
-Document ID: Auto-generated
-======================================================================
-
-🚀 Initializing RAG Pipeline...
-✅ RAG Pipeline initialized successfully!
-
-📄 Calling process_document('sample.pdf', 'None')...
---------------------------------------------------
-📂 Loading document...
-   Loaded 1 document sections
-✂️ Chunking documents...
-   Created 5 chunks
-🧠 Creating embeddings...
-   Generated 5 embeddings
-💾 Storing in vector database...
-Added 5 documents to test_process_doc
-✅ Document processed successfully in 3.45s
-   Document ID: 1234567890
-```
 
 ## 📊 Hiệu suất và giới hạn
 
@@ -331,63 +607,148 @@ Added 5 documents to test_process_doc
 # - Format: key:value pairs per row
 ```
 
-## 🚦 Troubleshooting
+### 🚦 Lỗi thường gặp và cách khắc phục
 
-### Lỗi thường gặp
+#### 1. Lỗi kết nối Milvus
 
-**1. Milvus Connection Error**
+**Lỗi:** `pymilvus.exceptions.MilvusException: <MilvusException: (code=1, message=Fail connecting to server on localhost:19530...)`
+
+**Nguyên nhân & Khắc phục:**
 ```bash
 # Kiểm tra Milvus container
-docker ps | grep milvus
-docker logs <milvus_container_id>
+docker ps | findstr milvus
 
-# Khởi động lại Milvus
-docker run -d --name milvus-standalone -p 19530:19530 milvusdb/milvus:latest
+# Nếu không có container nào, khởi động Milvus
+docker run -d --name milvus-standalone -p 19530:19530 -p 9091:9091 milvusdb/milvus:v2.3.3
+
+# Nếu container đã tồn tại nhưng stopped
+docker start milvus-standalone
+
+# Kiểm tra logs để debug
+docker logs milvus-standalone --tail 50
+
+# Test kết nối
+python -c "from pymilvus import connections; connections.connect('default', host='localhost', port='19530'); print('✅ Connected!')"
 ```
 
-**2. Gemini API Error**  
-```python
-# Kiểm tra API key trong .env
+#### 2. Lỗi Gemini API
+
+**Lỗi:** `google.api_core.exceptions.Unauthorized: 401 API_KEY_INVALID`
+
+**Nguyên nhân & Khắc phục:**
+```bash
+# Kiểm tra API key trong .env file
+cat .env | findstr GEMINI_API_KEY
+
+# Tạo API key mới tại: https://aistudio.google.com/app/apikey
+# Thêm vào .env file:
+echo "GEMINI_API_KEY=your_actual_api_key_here" > .env
+
+# Test API key
+python -c "
+import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 load_dotenv()
-print(f"API Key exists: {bool(os.getenv('GEMINI_API_KEY'))}")
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+print('✅ Gemini API key valid!')
+"
 ```
 
-**3. File Loading Error**
-```python
-# Check file path và supported extensions
-supported = ['.pdf', '.docx', '.txt', '.csv', '.xlsx']
-file_ext = os.path.splitext(file_path)[1].lower()
-print(f"Extension {file_ext} supported: {file_ext in supported}")
-```
+#### 3. Lỗi import modules
 
-**4. Import Error**
+**Lỗi:** `ModuleNotFoundError: No module named 'rag.loaders'`
+
+**Nguyên nhân & Khắc phục:**
 ```python
-# Check sys.path trong rag_pipeline.py
+# Trong rag_pipeline.py, đảm bảo có:
 import sys
+from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Hoặc chạy từ thư mục gốc của project:
+cd /path/to/file2rag
+python -c "from rag.pipeline.rag_pipeline import RAGPipeline; print('✅ Import successful!')"
 ```
 
-### Debug Steps
+#### 4. Lỗi xử lý file
 
-1. **Test từng component**:
-```bash
-python -c "from rag.embedders.gemini_embedder import GeminiEmbedder; e=GeminiEmbedder(); print('Embedder OK')"
-python -c "from rag.vector_stores.milvus_vector_store import MilvusVectorStore; v=MilvusVectorStore(); print('Milvus OK')"
-```
+**Lỗi:** `FileNotFoundError: Document not found: document.pdf`
 
-2. **Check dependencies**:
-```bash
-pip list | grep -E "(langchain|pymilvus|google-generativeai)"
-```
-
-3. **Verbose logging**:
+**Khắc phục:**
 ```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
+import os
+
+file_path = "document.pdf"
+print(f"File exists: {os.path.exists(file_path)}")
+print(f"Absolute path: {os.path.abspath(file_path)}")
+
+# Sử dụng đường dẫn tuyệt đối
+full_path = os.path.abspath(file_path)
+doc_id = rag.process_document(full_path)
 ```
 
+#### 5. Lỗi memory với file lớn
+
+**Lỗi:** `MemoryError` hoặc quá trình xử lý quá chậm
+
+**Khắc phục:**
+```python
+# Điều chỉnh chunk size nhỏ hơn
+from rag.splitters.text_splitter import chunk_text_small
+
+# Hoặc tùy chỉnh chunk size
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,      # Giảm từ 1000
+    chunk_overlap=50,    # Giảm từ 200
+    length_function=len,
+)
+```
+
+#### 6. Lỗi encoding với file text
+
+**Lỗi:** `UnicodeDecodeError: 'utf-8' codec can't decode byte...`
+
+**Khắc phục:**
+```python
+# Kiểm tra encoding của file
+import chardet
+
+with open("file.txt", "rb") as f:
+    encoding = chardet.detect(f.read())
+    print(f"Detected encoding: {encoding}")
+
+# Convert sang UTF-8 nếu cần
+with open("file.txt", "r", encoding="latin-1") as f:
+    content = f.read()
+    
+with open("file_utf8.txt", "w", encoding="utf-8") as f:
+    f.write(content)
+```
+
+#### 7. Performance issues
+
+**Vấn đề:** Xử lý file quá chậm
+
+**Tối ưu hóa:**
+```python
+# 1. Giảm chunk size
+# 2. Batch embedding (cần implement)
+# 3. Parallel processing (future feature)
+
+# Monitor performance
+import time
+start = time.time()
+doc_id = rag.process_document("large_file.pdf")
+print(f"Processing time: {time.time() - start:.2f}s")
+
+# Ước tính thời gian cho file lớn:
+# - 1MB PDF: ~5-10 giây
+# - 10MB PDF: ~30-60 giây  
+# - 100MB file: có thể mất vài phút
+``` 
 ## 📝 Development Notes
 
 ### Current Implementation Status
@@ -429,25 +790,3 @@ logging.basicConfig(level=logging.DEBUG)
 ## 📄 License
 
 This project is licensed under the **MIT License** - see [LICENSE](LICENSE) for details.
-
-## 🙏 Acknowledgments
-
-- **Google AI Studio** - Gemini embeddings API
-- **Milvus Team** - Vector database excellence
-- **LangChain Community** - RAG inspiration
-- **Vietnamese AI Community** - Support and feedback
-
-## 📞 Support & Contact
-
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/file2rag/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/file2rag/discussions)
-- 📧 **Email**: support@file2rag.com
-- 🌐 **Website**: [file2rag.com](https://file2rag.com)
-
----
-
-<div align="center">
-
-**🇻🇳 Made with ❤️ for Vietnamese AI Community**
-
-[⭐ Star this repo](https://github.com/yourusername/file2rag) • [🐛 Report Bug](https://github.com/yourusername/file2rag/issues)

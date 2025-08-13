@@ -67,38 +67,3 @@ class MilvusVectorStore:
             self.collection.insert(data)
             self.collection.flush()
         print(f"Added {len(texts)} documents to {self.collection_name}")
-    
-    def similarity_search(self, 
-                         query_embedding: List[float], 
-                         k: int = 5) -> List[Dict[str, Any]]:
-        """Search similar documents"""
-        self.collection.load()
-        
-        search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
-        results = self.collection.search(
-            data=[query_embedding],
-            anns_field="embedding",
-            param=search_params,
-            limit=k,
-            output_fields=["content", "source", "page", "content_type", "chunk_index"]
-        )
-        
-        docs = []
-        for hit in results[0]:
-            docs.append({
-                "content": hit.entity.get("content"),
-                "metadata": {
-                    "source": hit.entity.get("source"),
-                    "page": hit.entity.get("page"),
-                    "content_type": hit.entity.get("content_type"),
-                    "chunk_index": hit.entity.get("chunk_index"),
-                    "score": hit.score
-                }
-            })
-        
-        return docs
-    
-    def delete_collection(self):
-        """Delete collection"""
-        utility.drop_collection(self.collection_name)
-        print(f"Deleted collection: {self.collection_name}")
